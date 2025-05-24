@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <sys/param.h>
 #include <wiringPi.h>
 #include <mcp3004.h>
 
@@ -27,6 +29,45 @@ FILE* open_process(const char* cmd) {
     return fp;
 }
 
+struct HandState {
+  int x, y;
+  int theta;
+  int mag;
+};
+
+struct HandState lHand, rHand;
+
+void
+get_handstate(FILE *fp, struct HandState *lHand, struct HandState *rHand)
+{
+  do {
+    fgets(linebuf, sizeof(linebuf), fp);
+  } while (!(linebuf[0] == '#' && linebuf[3] == '#'));
+
+  // we have a valid "#xx#" command, parse it...
+  if (strncmp(linebuf, "#fi#", 4) == 0)
+  {
+    // finish processing
+    printf("#fi# command received...shutting down\n");
+    pclose(fp);
+    exit(0);
+  }
+  else if (strncmp(linebuf, "#lh#", 4) == 0)
+  {
+    printf("#lh# command received...\n");
+    sscanf(linebuf, "#lh# ( %d , %d ), %d , %d", &lHand->x, &lHand->y, &lHand->theta, &lHand->mag);
+    printf("#lh# (%d,%d),%d,%d\n", lHand->x, lHand->y, lHand->theta, lHand->mag);
+  }
+  else if (strncmp(linebuf, "#rh#", 4) == 0)
+  {
+    printf("#rh# command received...\n");
+    sscanf(linebuf, "#rh# ( %d , %d ), %d , %d", &rHand->x, &rHand->y, &rHand->theta, &rHand->mag);
+    printf("#rh# (%d,%d),%d,%d\n", rHand->x, rHand->y, rHand->theta, rHand->mag);
+  }
+  else
+    printf("WARNING: Invalid command received...\n");
+}
+
 // 3) Close the stream and terminate the process
 void close_process(FILE *fp) {
     pclose(fp);
@@ -50,7 +91,7 @@ int main(void)
   }
 
   // open the AI engine
-  FILE *ps = open_process("stdbuf -oL ./handstate.sh");
+  FILE *fp = open_process("stdbuf -oL ./handstate.sh");
 
   printf("Raspberry Pi AI motor controller\n");
 
@@ -59,26 +100,31 @@ int main(void)
     unsigned xval = analogRead(100);
     unsigned speed;
 
-    if (xval < PWM_MAXVAL/2)
+    get_handstate(fp, &lHand, &rHand);
+
+    // compute new xval
+    xval = (int)(abs(lHand.theta) * 512.0/180.0);
+    
+
+    if (lHand.theta >= 0)
     {
       // forward
       digitalWrite(L293_INPUT1, HIGH);
       digitalWrite(L293_INPUT2, LOW);
-      speed = ((PWM_MAXVAL/2) - xval) * 2;
+      speed = MIN(1024, xval * 6);
     }
     else
     {
       // backward
       digitalWrite(L293_INPUT1, LOW);
       digitalWrite(L293_INPUT2, HIGH);
-      speed = (xval - (PWM_MAXVAL/2)) * 2;
+      speed = MIN(1024, xval * 6);
     }
 
     pwmWrite(L293_ENABLE, speed);
-    // printf("Analog joystick: x == %4d, y == %4d, pwmVal = %4d\n", xval, 0, speed);
+    printf("Analog joystick: theta == %4d, speed = %4d\n", lHand.theta, speed);
   }
 
-  close_process(ps);
   return 0 ;
 }
 

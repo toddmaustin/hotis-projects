@@ -2,4 +2,5 @@ FOO*
 motor
 joystick
 joymotor
+ai-motor
 *.o

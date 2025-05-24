@@ -1,6 +1,6 @@
 CC = gcc
 OFLAGS = -Wall -O0 -g
-LIBS = -lwiringPi
+LIBS = -lwiringPi -lm
 
 build: motor joystick joymotor ai-motor
 
