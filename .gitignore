@@ -4,3 +4,4 @@ joystick
 joymotor
 ai-motor
 *.o
+*.swp
