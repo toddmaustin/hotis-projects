@@ -3,6 +3,7 @@
 #include <math.h>
 #include <wiringPi.h>
 #include <mcp3004.h>
+#include "core.h"
 
 #define	X_INPUT	100
 

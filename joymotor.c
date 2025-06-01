@@ -3,6 +3,7 @@
 #include <math.h>
 #include <wiringPi.h>
 #include <mcp3004.h>
+#include "core.h"
 
 #define	L293_ENABLE	26
 #define	L293_INPUT1	21
