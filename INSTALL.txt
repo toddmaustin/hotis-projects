@@ -1,0 +1,67 @@
+INSTALLATION NOTES
+==================
+
+- image Raspios 6.1 image file onto MicroSD card
+- boot systems, US keyboard, user/password login
+- connect to WiFi
+- run "datetimectl" to set time
+- run "sudo rasp-config", -> Localization -> Keyboard -> Dell 101 PC -> US Layout
+- do not update the OS and applications (this has not been tested, and MemryX drivers fail on newer kernels!)
+- open browser, go to "MemryX Get Started", https://developer.memryx.com/get_started/index.html
+
+- enable the SPI device
+
+sudo raspi-config   # go to Interface Options, enable SPI
+
+- run these OS setup commands:
+
+sudo apt update
+sudo apt -y install libhdf5-dev python3-dev cmake python3-venv build-essential   # very important, lots of failure if you miss this
+python -m venv ~/mx
+vi ~/.bashrc  # add ". ~/mx/bin/activate" at the end
+source ~/.bashrc # you should get an "(mx)" indicator on the command line, showing the mx python env active
+pip3 install --upgrade pip wheel
+pip3 install --extra-index-url https://developer.memryx.com/pip memryx   # this take a long time, should not fail, some setup.py warnings
+mx_nc --version   # for me, this listed "1.2.0"
+sudo apt -y install linux-headers-$(uname -r)
+wget -qO- https://developer.memryx.com/deb/memryx.asc | sudo tee /etc/apt/trusted.gpg.d/memryx.asc >/dev/null
+echo 'deb https://developer.memryx.com/deb stable main' | sudo tee /etc/apt/sources.list.d/memryx.list >/dev/null
+sudo apt update
+sudo apt -y install memx-drivers memx-accl
+sudo mx_arm_setup   # select "Raspberry PI 5"
+shutdown --reboot now   # restart system
+apt policy memx-drivers   # verify installation, my install listed "memx-drivers Installed: 1.2.1-3.1"
+sudo apt -y install memx-accl-plugins memx-utils-gui
+pip3 install opencv-python
+cd
+git clone https://github.com/WiringPi/WiringPi.git
+cd WiringPi
+./build debian
+sudo apt -y install ./debian-template/wiringpi_3.14_arm64.deb   # note that the version number may change
+
+- test the memx driver and utilities installation
+
+mx_bench --hello
+
+Expected output:
+
+Hello from MXA!
+Group: 0
+Number of chips: 4
+Interface: PCIe 3.0
+
+ls -l /dev/memx*   # you should see the memx0 driver device and "features" device
+
+- install the camp applications
+
+cd
+git clone https://github.com/toddmaustin/hotis-projects.git
+cd hotis-projects
+make clean build
+# set up the breadboard, power it up
+sudo ./joystick      # joystick reading are printed to console
+sudo ./motor         # motor controller is put to full/half speed, forward/reverse directions 
+sudo ./joymotor      # control the motor with the joystick, forward/backwards variable speed
+sudo ./handstate.sh  # raw AI handstate recognizer, uses the MemryX card, show left right hand state
+sudo ./ai-motor      # use left hand state to control motor
+
